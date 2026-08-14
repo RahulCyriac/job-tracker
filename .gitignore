@@ -1,0 +1,18 @@
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+
+# Environment Secrets
+.env
+
+# Database Data
+*.sqlite3
+
+# AI Instructions & Learning Docs
+AGENTS.md
+docs/

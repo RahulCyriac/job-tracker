@@ -1,0 +1,9 @@
+pyproject.toml
+app/main.py
+app/core/config.py
+app/db/session.py
+job_tracker_backend.egg-info/PKG-INFO
+job_tracker_backend.egg-info/SOURCES.txt
+job_tracker_backend.egg-info/dependency_links.txt
+job_tracker_backend.egg-info/requires.txt
+job_tracker_backend.egg-info/top_level.txt
