@@ -13,6 +13,8 @@ __pycache__/
 # Database Data
 *.sqlite3
 
-# AI Instructions & Learning Docs
+# AI Instructions, Local Skills & Interactive Lessons
 AGENTS.md
 docs/
+.agents/
+lessons/
