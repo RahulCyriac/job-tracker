@@ -35,43 +35,39 @@ async def application_get_all(skip: int = 0,
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/{application_id}", response_model=ApplicationResponse)
+@router.get("/{id}", response_model=ApplicationResponse)
 async def application_get(
     id: uuid.UUID, db: AsyncSession = Depends(get_db)
 ):
-    try:
-        application = await ApplicationService.get(db, application_id=id)
-        if not application:
-            raise HTTPException(status_code=404, detail="Application not found")
-        return application
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    application = await ApplicationService.get(db, application_id=id)
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+    return application
 
     
-@router.patch("/{application_id}/status", response_model=ApplicationResponse)
+@router.patch("/{id}/status", response_model=ApplicationResponse)
 async def application_update_status(    
-    application_id: uuid.UUID,
+    id: uuid.UUID,
     status_in: StatusEventCreate,
     db: AsyncSession = Depends(get_db),
 ):
     try:
         application = await ApplicationService.update_status(
-            db, application_id=application_id, status_in=status_in
+            db, application_id=id, status_in=status_in
         )
         return application
     except ValueError as ve:
         raise HTTPException(status_code=404, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
 
-@router.delete("/{application_id}", response_model=ApplicationResponse)
+@router.delete("/{id}", response_model=ApplicationResponse)
 async def application_delete(
-    application_id: uuid.UUID, db: AsyncSession = Depends(get_db)
+    id: uuid.UUID, db: AsyncSession = Depends(get_db)
 ):
-    try:
-        application = await ApplicationService.delete(db, application_id=application_id)
-        if not application:
-            raise HTTPException(status_code=204, detail="Application not found")
-        return application
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    
+    application = await ApplicationService.delete(db, application_id=id)
+    if not application:
+        raise HTTPException(status_code=204, detail="Application not found")
+    return application
