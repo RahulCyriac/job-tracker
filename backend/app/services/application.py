@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone,timedelta
 import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -111,3 +111,20 @@ class ApplicationService:
         await db.delete(application)
         await db.commit()
         return True
+
+    @staticmethod
+    async def detect_and_mark_ghosted(db: AsyncSession,days_threshold: int = 14):
+        today = datetime.now(timezone.utc).date()
+        cutoff_date = today - timedelta(days=days_threshold)
+        stmt = (select(Application)
+                .where(Application.date_applied<=cutoff_date , Application.current_status == "APPLIED").options(selectinload(Application.events)))
+        result = await db.scalars(stmt)
+        apps_to_ghost = result.all()
+        for i in apps_to_ghost:
+                i.current_status="GHOSTED"
+                new_event = StatusEvent(from_status = "APPLIED", to_status = "GHOSTED",note = f"Auto-detected as ghosted after {days_threshold} days of inactivity")
+                i.events.append(new_event)
+        
+        
+        await db.commit()
+        return apps_to_ghost

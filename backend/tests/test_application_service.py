@@ -1,11 +1,10 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.application import ApplicationCreate
 from app.schemas.status_event import StatusEventCreate
 from app.services.application import ApplicationService
-
 
 @pytest.mark.asyncio
 async def test_create_application_creates_initial_event(
@@ -57,3 +56,37 @@ async def test_update_status_appends_event_and_records_first_response(
   assert updated_app.events[1].from_status == "APPLIED"
   assert updated_app.events[1].to_status == "INTERVIEWING"
   assert updated_app.events[1].note == "Passed initial screening"
+
+@pytest.mark.asyncio
+async def test_detect_and_mark_ghosted_applications(db_session: AsyncSession):
+  today = datetime.now(timezone.utc).date()
+  # 1. Create a recent application (3 days ago - should NOT be ghosted)
+  recent_app = await ApplicationService.create(
+      db_session,
+      app_in=ApplicationCreate(
+          company_name="Recent Corp",
+          role_title="Backend Dev",
+          date_applied=today - timedelta(days=3),
+      ),
+  )
+  # 2. Create an old application (20 days ago - SHOULD be ghosted)
+  old_app = await ApplicationService.create(
+      db_session,
+      app_in=ApplicationCreate(
+          company_name="Ghost Corp",
+          role_title="SDE 1",
+          date_applied=today - timedelta(days=20),
+      ),
+  )
+  # 3. Execute Ghost Detection Service (14-day threshold)
+  ghosted_apps = await ApplicationService.detect_and_mark_ghosted(
+      db_session, days_threshold=14
+  )
+  # 4. Assert Invariants
+  assert len(ghosted_apps) == 1
+  assert ghosted_apps[0].id == old_app.id
+  assert ghosted_apps[0].current_status == "GHOSTED"
+  assert ghosted_apps[0].date_first_response is None
+  assert len(ghosted_apps[0].events) == 2
+  assert ghosted_apps[0].events[1].from_status == "APPLIED"
+  assert ghosted_apps[0].events[1].to_status == "GHOSTED"
