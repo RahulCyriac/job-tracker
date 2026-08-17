@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.main import app
-
+from datetime import datetime,timezone,timedelta
 
 @pytest.fixture
 async def async_client(db_session: AsyncSession):
@@ -71,3 +71,45 @@ async def test_get_nonexistent_application_returns_404(
   random_uuid = str(uuid.uuid4())
   res = await async_client.get(f"/api/v1/applications/{random_uuid}")
   assert res.status_code == 404
+
+@pytest.mark.asyncio
+async def  test_api_detect_ghosted(async_client:  AsyncClient,db_session: AsyncSession):
+  today = datetime.now(timezone.utc).date()
+  twenty_days_ago = (today - timedelta(days=20)).isoformat()
+  ten_days_ago = (today - timedelta(days=10)).isoformat()
+  payload = {
+            "company_name": "Netflix",
+            "role_title": "Platform Engineer",
+            "source": "linkedin",
+            "location_type": "remote",
+            "date_applied" : twenty_days_ago,
+            }
+  await async_client.post("/api/v1/applications/",json= payload)
+  res = await async_client.post("/api/v1/applications/detect-ghosted?days_threshold=14")
+  data = res.json()
+  print(data)
+  assert len(data) == 1
+  assert data[0]["company_name"] == "Netflix"
+  assert data[0]["current_status"] == "GHOSTED"
+  assert len(data[0]["events"]) == 2
+  
+
+
+
+  payload = {
+              "company_name": "Amazon",
+              "role_title": "Platform Engineer",
+              "source": "linkedin",
+              "location_type": "remote",
+              "date_applied" : ten_days_ago,
+              }
+  create_res = await async_client.post("/api/v1/applications/",json= payload)
+  amazon_id = create_res.json()["id"]
+  res = await async_client.post("/api/v1/applications/detect-ghosted?days_threshold=14")
+  data = res.json()
+  assert data == []
+
+  get_res = await async_client.get(f"/api/v1/applications/{amazon_id}")
+  assert get_res.json()["current_status"] == "APPLIED"
+  assert len(get_res.json()["events"]) == 1
+    

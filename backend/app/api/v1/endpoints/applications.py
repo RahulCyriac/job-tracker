@@ -71,3 +71,15 @@ async def application_delete(
     if not application:
         raise HTTPException(status_code=204, detail="Application not found")
     return application
+
+
+@router.post("/detect-ghosted", response_model = list[ApplicationResponse])
+async def get_detected_ghost_applications(
+    db: AsyncSession = Depends(get_db),
+    days_threshold: int = 14
+):
+
+    application = await ApplicationService.detect_and_mark_ghosted(db,days_threshold)
+    return application
+
+    
