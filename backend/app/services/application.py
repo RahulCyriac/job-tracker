@@ -1,4 +1,4 @@
-from datetime import datetime, timezone,timedelta
+from datetime import datetime, timezone, timedelta
 import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +16,7 @@ class ApplicationService:
         app_data = app_in.model_dump(exclude_unset=True)
         application = Application(**app_data)
 
-        # Invariant 1: Append initial StatusEvent
+        # Initial transition event on creation
         initial_event = StatusEvent(from_status=None, to_status="APPLIED")
         application.events.append(initial_event)
 
@@ -32,7 +32,6 @@ class ApplicationService:
         application_id: uuid.UUID,
         status_in: StatusEventCreate,
     ) -> Application:
-        # Query application with loaded events
         stmt = (
             select(Application)
             .where(Application.id == application_id)
@@ -45,14 +44,13 @@ class ApplicationService:
         old_status = application.current_status
         application.current_status = status_in.to_status
 
-        # Invariant 2: Auto-record first response date
+        # Auto-record first response date upon exiting initial APPLIED stage
         if (
             application.date_first_response is None
             and status_in.to_status != "APPLIED"
         ):
             application.date_first_response = datetime.now(timezone.utc).date()
 
-        # Append new event
         new_event = StatusEvent(
             from_status=old_status,
             to_status=status_in.to_status,
@@ -64,13 +62,10 @@ class ApplicationService:
         await db.refresh(application, attribute_names=["events"])
         return application
 
-
-
-
     @staticmethod
     async def get(
-            db: AsyncSession, *, application_id: uuid.UUID
-        ) -> Application | None:
+        db: AsyncSession, *, application_id: uuid.UUID
+    ) -> Application | None:
         stmt = (
             select(Application)
             .where(Application.id == application_id)
@@ -80,13 +75,13 @@ class ApplicationService:
 
     @staticmethod
     async def get_multi(
-            db: AsyncSession,
-            *,
-            skip: int = 0,
-            limit: int = 100,
-            status: str | None = None,
-            source: str | None = None,
-        ) -> list[Application]:
+        db: AsyncSession,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        status: str | None = None,
+        source: str | None = None,
+    ) -> list[Application]:
         stmt = (
             select(Application)
             .options(selectinload(Application.events))
@@ -113,18 +108,32 @@ class ApplicationService:
         return True
 
     @staticmethod
-    async def detect_and_mark_ghosted(db: AsyncSession,days_threshold: int = 14):
+    async def detect_and_mark_ghosted(
+        db: AsyncSession, days_threshold: int = 14
+    ) -> list[Application]:
         today = datetime.now(timezone.utc).date()
         cutoff_date = today - timedelta(days=days_threshold)
-        stmt = (select(Application)
-                .where(Application.date_applied<=cutoff_date , Application.current_status == "APPLIED").options(selectinload(Application.events)))
+
+        stmt = (
+            select(Application)
+            .where(
+                Application.date_applied <= cutoff_date,
+                Application.current_status == "APPLIED",
+            )
+            .options(selectinload(Application.events))
+        )
         result = await db.scalars(stmt)
-        apps_to_ghost = result.all()
-        for i in apps_to_ghost:
-                i.current_status="GHOSTED"
-                new_event = StatusEvent(from_status = "APPLIED", to_status = "GHOSTED",note = f"Auto-detected as ghosted after {days_threshold} days of inactivity")
-                i.events.append(new_event)
-        
-        
+        apps_to_ghost = list(result.all())
+
+        for app in apps_to_ghost:
+            app.current_status = "GHOSTED"
+            app.events.append(
+                StatusEvent(
+                    from_status="APPLIED",
+                    to_status="GHOSTED",
+                    note=f"Auto-detected as ghosted after {days_threshold} days of inactivity",
+                )
+            )
+
         await db.commit()
         return apps_to_ghost
