@@ -95,7 +95,6 @@ async def  test_api_detect_ghosted(async_client:  AsyncClient,db_session: AsyncS
   
 
 
-
   payload = {
               "company_name": "Amazon",
               "role_title": "Platform Engineer",
