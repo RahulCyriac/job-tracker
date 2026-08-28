@@ -1,3 +1,4 @@
+import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -15,14 +16,20 @@ class Settings(BaseSettings):
   POSTGRES_PASSWORD: str = "postgres"
   POSTGRES_DB: str = "job_tracker"
 
-  # Direct cloud database URL from environment variable:
   DATABASE_URL: str | None = None
 
   @property
   def SQLALCHEMY_DATABASE_URI(self) -> str:
-    if self.DATABASE_URL:
-      url = str(self.DATABASE_URL)
-      # Convert postgres:// or postgresql:// to postgresql+asyncpg://
+    # Direct check on OS process environment (covers Render, Railway, Docker, Neon)
+    env_url = (
+        os.environ.get("DATABASE_URL")
+        or os.environ.get("DATABASE_URI")
+        or os.environ.get("NEON_DATABASE_URL")
+        or self.DATABASE_URL
+    )
+    if env_url:
+      url = str(env_url).strip().strip("'").strip('"')
+      # Convert standard postgres:// or postgresql:// to postgresql+asyncpg://
       if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql+asyncpg://", 1)
       elif url.startswith("postgresql://") and not url.startswith("postgresql+asyncpg://"):
@@ -35,10 +42,5 @@ class Settings(BaseSettings):
         f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
         f"@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
     )
-
-  # Backwards compatibility alias
-  @property
-  def DB_URL(self) -> str:
-    return self.SQLALCHEMY_DATABASE_URI
 
 settings = Settings()
