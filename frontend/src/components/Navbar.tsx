@@ -5,6 +5,7 @@ import React from 'react';
 interface NavbarProps {
   onOpenAddModal: () => void;
   onDetectGhosted: () => void;
+  onOpenAnalyticsModal: () => void;
   isDetecting: boolean;
   totalApplications: number;
 }
@@ -12,6 +13,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   onOpenAddModal,
   onDetectGhosted,
+  onOpenAnalyticsModal,
   isDetecting,
   totalApplications,
 }) => {
@@ -45,6 +47,11 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         <button className="btn btn-primary" onClick={onOpenAddModal}>
           + Add Application
+        </button>
+
+
+        <button className="btn btn-secondary" onClick = {onOpenAnalyticsModal}> 
+          Analytics
         </button>
       </div>
     </header>

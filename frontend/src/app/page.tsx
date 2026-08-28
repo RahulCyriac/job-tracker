@@ -12,6 +12,7 @@ import {
 import { Navbar } from '@/components/Navbar';
 import { ApplicationCard } from '@/components/ApplicationCard';
 import { AddApplicationModal } from '@/components/AddApplicationModal';
+import { AnalyticsModal } from '@/components/AnalyticsModal'; 
 
 const COLUMNS: {
   key: StatusType;
@@ -32,7 +33,7 @@ export default function KanbanPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetecting, setIsDetecting] = useState(false);
-
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const loadData = async () => {
     try {
       setLoading(true);
@@ -100,6 +101,7 @@ export default function KanbanPage() {
       <Navbar
         onOpenAddModal={() => setIsModalOpen(true)}
         onDetectGhosted={handleDetectGhosted}
+        onOpenAnalyticsModal={() => setIsAnalyticsOpen(true)}
         isDetecting={isDetecting}
         totalApplications={applications.length}
       />
@@ -150,6 +152,10 @@ export default function KanbanPage() {
                         />
                       ))
                     )}
+                    <AnalyticsModal
+                      isOpen={isAnalyticsOpen}
+                      onClose={() => setIsAnalyticsOpen(false)}
+                      />
                   </div>
                 </div>
               );
@@ -164,5 +170,7 @@ export default function KanbanPage() {
         onSubmit={handleCreate}
       />
     </div>
+
+    
   );
 }

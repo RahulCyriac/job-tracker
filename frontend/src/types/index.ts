@@ -1,3 +1,4 @@
+
 export type StatusType =
   | 'APPLIED'
   | 'SCREENING'
@@ -44,4 +45,29 @@ export interface ApplicationCreate {
   salary_range_max?: number;
   notes?: string;
   date_applied?: string;
+}
+
+export interface AnalyticsResponse{
+  total_applications: number;
+  ghosted_count: number;
+  active_count: number;
+  responded_count:number ;
+  median_response_time_days?:number; 
+  sources:{[key:string]:SourceMetric};
+  funnel:FunnelMetric;
+  }
+
+export interface SourceMetric{
+  total:number;
+  responded:number;
+  response_rate_pct:number
+}
+
+export interface FunnelMetric{
+  applied:number; 
+  screening:number;
+  interviewing:number;
+  offer:number;
+  rejected:number ;
+  ghosted:number;
 }

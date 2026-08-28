@@ -1,4 +1,4 @@
-import { Application, ApplicationCreate, StatusType } from '@/types';
+import { Application, ApplicationCreate, StatusType,AnalyticsResponse,SourceMetric,FunnelMetric } from '@/types';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -55,4 +55,12 @@ export async function deleteApplication(id: string): Promise<void> {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error('Failed to delete application');
+}
+
+export async function getAnalytics(): Promise<AnalyticsResponse>{
+  const res = await fetch(`${API_BASE_URL}/analytics/`,{
+    method: 'GET',cache:'no-store'
+  });
+  if (!res.ok) throw new Error ('Failed to fetch applications');
+  return res.json();
 }
