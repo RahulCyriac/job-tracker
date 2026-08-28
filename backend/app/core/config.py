@@ -1,4 +1,5 @@
 import os
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -29,15 +30,26 @@ class Settings(BaseSettings):
     )
     if env_url:
       url = str(env_url).strip().strip("'").strip('"')
-      # Convert standard postgres:// or postgresql:// to postgresql+asyncpg://
+      # Convert postgres:// or postgresql:// to postgresql+asyncpg://
       if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql+asyncpg://", 1)
       elif url.startswith("postgresql://") and not url.startswith("postgresql+asyncpg://"):
         url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
-      # Fix sslmode parameter for asyncpg
-      if "sslmode=require" in url:
-        url = url.replace("sslmode=require", "ssl=require")
-      return url
+
+      # Clean and sanitize query parameters for asyncpg compatibility
+      try:
+        parsed = urlparse(url)
+        query_params = parse_qs(parsed.query)
+        # asyncpg does not accept channel_binding or target_session_attrs
+        for unsupported_key in ["channel_binding", "target_session_attrs", "sslmode", "options"]:
+          query_params.pop(unsupported_key, None)
+        # Ensure ssl=require for cloud PostgreSQL (Neon, Supabase, RDS)
+        query_params["ssl"] = ["require"]
+        clean_query = urlencode(query_params, doseq=True)
+        return urlunparse(parsed._replace(query=clean_query))
+      except Exception:
+        return url
+
     return (
         f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
         f"@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
