@@ -82,7 +82,7 @@ async def run_async_migrations() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
-    configuration = config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+    configuration = config.set_main_option("sqlalchemy.url", settings.SQLALCHEMY_DATABASE_URI)
     asyncio.run(run_async_migrations())
 
 

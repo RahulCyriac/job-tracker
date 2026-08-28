@@ -1,4 +1,3 @@
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -15,22 +14,31 @@ class Settings(BaseSettings):
   POSTGRES_USER: str = "postgres"
   POSTGRES_PASSWORD: str = "postgres"
   POSTGRES_DB: str = "job_tracker"
-  DATABASE_URL_OVERRIDE: str | None = Field(
-      default=None, validation_alias="DATABASE_URL"
-  )
+
+  # Direct cloud database URL from environment variable:
+  DATABASE_URL: str | None = None
 
   @property
-  def DATABASE_URL(self) -> str:
-    if self.DATABASE_URL_OVERRIDE:
-      url = self.DATABASE_URL_OVERRIDE
+  def SQLALCHEMY_DATABASE_URI(self) -> str:
+    if self.DATABASE_URL:
+      url = str(self.DATABASE_URL)
+      # Convert postgres:// or postgresql:// to postgresql+asyncpg://
       if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql+asyncpg://", 1)
       elif url.startswith("postgresql://") and not url.startswith("postgresql+asyncpg://"):
         url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+      # Fix sslmode parameter for asyncpg
+      if "sslmode=require" in url:
+        url = url.replace("sslmode=require", "ssl=require")
       return url
     return (
         f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
         f"@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
     )
+
+  # Backwards compatibility alias
+  @property
+  def DB_URL(self) -> str:
+    return self.SQLALCHEMY_DATABASE_URI
 
 settings = Settings()
