@@ -111,4 +111,12 @@ async def  test_api_detect_ghosted(async_client:  AsyncClient,db_session: AsyncS
   get_res = await async_client.get(f"/api/v1/applications/{amazon_id}")
   assert get_res.json()["current_status"] == "APPLIED"
   assert len(get_res.json()["events"]) == 1
-    
+
+
+@pytest.mark.asyncio
+async def test_job_parser(async_client:AsyncClient):
+    payload = {"text" : "Google is hiring a Senior Backend Engineer (Remote). Salary: $140k - $180k. Apply at: https://careers.google.com/jobs/1"}
+    res = await async_client.post("/api/v1/applications/parse-job",json = payload)
+    assert res.status_code == 200
+    assert res.json()['company_name'] == "Google"
+    assert res.json()["salary_range_min"] == 140000

@@ -5,6 +5,8 @@ from app.db.session import get_db
 from app.schemas.application import ApplicationCreate, ApplicationResponse
 from app.schemas.status_event import StatusEventCreate
 from app.services.application import ApplicationService
+from app.schemas.job_parser import JobParseRequest,JobParseResponse
+from app.services.job_parser import JobParserService
 
 router = APIRouter()
 
@@ -82,3 +84,15 @@ async def application_detect_ghosted(
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/parse-job",response_model=JobParseResponse)
+async def parse(
+    req:JobParseRequest,
+):
+    try:
+        return await JobParserService.parse(
+            text=req.text,url = req.url
+        )
+    except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))

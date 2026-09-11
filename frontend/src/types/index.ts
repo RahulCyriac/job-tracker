@@ -71,3 +71,18 @@ export interface FunnelMetric{
   rejected:number ;
   ghosted:number;
 }
+
+export interface JobParseRequest {
+  text: string;
+  url?: string | null;
+}
+
+export interface JobParseResponse {
+  company_name: string | null;
+  role_title: string | null;
+  location_type: string | null;
+  salary_range_min: number | null;
+  salary_range_max: number | null;
+  job_url: string | null;
+  raw_posting_text: string;
+}

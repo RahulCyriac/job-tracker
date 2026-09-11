@@ -1,4 +1,4 @@
-import { Application, ApplicationCreate, StatusType,AnalyticsResponse,SourceMetric,FunnelMetric } from '@/types';
+import { Application, ApplicationCreate, StatusType,AnalyticsResponse,SourceMetric,FunnelMetric,JobParseRequest,JobParseResponse } from '@/types';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -62,5 +62,18 @@ export async function getAnalytics(): Promise<AnalyticsResponse>{
     method: 'GET',cache:'no-store'
   });
   if (!res.ok) throw new Error ('Failed to fetch applications');
+  return res.json();
+}
+
+
+export async function parseJob(
+  data: JobParseRequest
+): Promise<JobParseResponse> {
+  const res = await fetch(`${API_BASE_URL}/applications/parse-job`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to parse job description');
   return res.json();
 }

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ApplicationCreate } from '@/types';
+import { parseJob } from '@/services/api';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -23,7 +24,51 @@ export const AddApplicationModal: React.FC<AddModalProps> = ({
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Auto-Fill Text Parser State
+  const [pasteText, setPasteText] = useState('');
+  const [isParsing, setIsParsing] = useState(false);
+  const [showPasteBox, setShowPasteBox] = useState(false);
+
   if (!isOpen) return null;
+
+  const handleAutoFill = async () => {
+    if (!pasteText.trim()) return;
+    setIsParsing(true);
+    try {
+      const parsed = await parseJob({ text: pasteText });
+      if (parsed.company_name) setCompanyName(parsed.company_name);
+      if (parsed.role_title) setRoleTitle(parsed.role_title);
+      if (
+        parsed.location_type &&
+        ['remote', 'hybrid', 'onsite'].includes(parsed.location_type.toLowerCase())
+      ) {
+        setLocationType(parsed.location_type.toLowerCase());
+      }
+      if (parsed.salary_range_min != null) {
+        setSalaryMin(parsed.salary_range_min.toString());
+      }
+      if (parsed.salary_range_max != null) {
+        setSalaryMax(parsed.salary_range_max.toString());
+      }
+      if (parsed.job_url) {
+        setNotes((prev) =>
+          prev ? `${prev} | Link: ${parsed.job_url}` : `Link: ${parsed.job_url}`
+        );
+      }
+      setShowPasteBox(false);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to parse job description. Please check your backend connection.');
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
+  const handleClose = () => {
+    setPasteText('');
+    setShowPasteBox(false);
+    onClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +91,8 @@ export const AddApplicationModal: React.FC<AddModalProps> = ({
       setSalaryMin('');
       setSalaryMax('');
       setNotes('');
+      setPasteText('');
+      setShowPasteBox(false);
       onClose();
     } catch (err) {
       console.error(err);
@@ -56,12 +103,12 @@ export const AddApplicationModal: React.FC<AddModalProps> = ({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={handleClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 className="modal-title">✨ Add Job Application</h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             style={{
               background: 'transparent',
               border: 'none',
@@ -72,6 +119,80 @@ export const AddApplicationModal: React.FC<AddModalProps> = ({
           >
             ✕
           </button>
+        </div>
+
+        {/* Auto-Fill Parser Banner / Dropdown */}
+        <div style={{ marginBottom: '1.25rem' }}>
+          {!showPasteBox ? (
+            <button
+              type="button"
+              onClick={() => setShowPasteBox(true)}
+              className="btn btn-secondary"
+              style={{
+                width: '100%',
+                justifyContent: 'center',
+                background: 'rgba(56, 189, 248, 0.08)',
+                borderColor: 'rgba(56, 189, 248, 0.3)',
+                color: '#38bdf8',
+                fontSize: '0.85rem',
+              }}
+            >
+              📋 Auto-Fill with Job Description (LinkedIn / Indeed)
+            </button>
+          ) : (
+            <div
+              style={{
+                background: 'var(--bg-card)',
+                padding: '1rem',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid rgba(56, 189, 248, 0.35)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.6rem',
+              }}
+            >
+              <label
+                className="form-label"
+                style={{ color: '#38bdf8', fontWeight: 600 }}
+              >
+                Paste raw posting from LinkedIn / Indeed / Naukri:
+              </label>
+              <textarea
+                className="form-input"
+                rows={4}
+                placeholder="e.g. 'Google is hiring a Senior Backend Engineer (Remote). Salary: $140k - $180k. Requirements: Python, FastAPI...'"
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+                style={{ width: '100%', resize: 'vertical', fontSize: '0.85rem' }}
+              />
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '0.5rem',
+                  marginTop: '0.25rem',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowPasteBox(false)}
+                  className="btn btn-secondary"
+                  style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAutoFill}
+                  disabled={isParsing || !pasteText.trim()}
+                  className="btn btn-primary"
+                  style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
+                >
+                  {isParsing ? '⏳ Parsing...' : '⚡ Auto-Fill Form'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -167,7 +288,7 @@ export const AddApplicationModal: React.FC<AddModalProps> = ({
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={onClose}
+              onClick={handleClose}
             >
               Cancel
             </button>
