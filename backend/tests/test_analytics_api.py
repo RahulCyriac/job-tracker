@@ -3,16 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.main import app
 from app.db.session import get_db
 from httpx import ASGITransport, AsyncClient
-@pytest.fixture
-async def async_client(db_session:AsyncSession):
-    app.dependency_overrides[get_db] = lambda : db_session
-
-    async with AsyncClient(
-        transport = ASGITransport(app = app),base_url = "http://test"
-
-    ) as client:
-        yield client
-    app.dependency_overrides.clear()
 
 @pytest.mark.asyncio
 async def test_analytics_response_empty_database(async_client:AsyncClient):

@@ -2,13 +2,14 @@ import uuid
 from datetime import date, datetime, timezone
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Date, DateTime, Integer, String, Text
+from sqlalchemy import Date, DateTime, Integer, String, Text , ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base_class import Base
 
 if TYPE_CHECKING:
     from app.models.status_event import StatusEvent
+    from app.models.user import User
 
 
 class Application(Base):
@@ -17,6 +18,9 @@ class Application(Base):
     # 1. Primary Key
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
 
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+    ForeignKey("user.id", ondelete="CASCADE"), nullable=True, index=True)
+    user: Mapped["User | None"] = relationship(back_populates="applications")
     # 2. Company & Role
     company_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     role_title: Mapped[str] = mapped_column(String(255), nullable=False, index=True)

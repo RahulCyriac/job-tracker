@@ -6,17 +6,6 @@ from app.db.session import get_db
 from app.main import app
 from datetime import datetime,timezone,timedelta
 
-@pytest.fixture
-async def async_client(db_session: AsyncSession):
-  # Override FastAPI get_db dependency to use our in-memory test database
-  app.dependency_overrides[get_db] = lambda: db_session
-
-  async with AsyncClient(
-      transport=ASGITransport(app=app), base_url="http://test"
-  ) as client:
-    yield client
-
-  app.dependency_overrides.clear()
 
 
 @pytest.mark.asyncio

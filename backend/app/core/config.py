@@ -19,6 +19,12 @@ class Settings(BaseSettings):
 
   DATABASE_URL: str | None = None
 
+  SECRET_KEY: str = os.environ.get(
+        "SECRET_KEY", "super-secret-production-key-change-in-env-12345"
+    )
+  ALGORITHM: str = "HS256"
+  ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+  
   @property
   def SQLALCHEMY_DATABASE_URI(self) -> str:
     # Direct check on OS process environment (covers Render, Railway, Docker, Neon)

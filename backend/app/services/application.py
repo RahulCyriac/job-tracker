@@ -12,9 +12,11 @@ from app.schemas.status_event import StatusEventCreate
 class ApplicationService:
 
     @staticmethod
-    async def create(db: AsyncSession, *, app_in: ApplicationCreate) -> Application:
+    async def create(
+        db: AsyncSession, *, app_in: ApplicationCreate, user_id: uuid.UUID | None = None
+    ) -> Application:
         app_data = app_in.model_dump(exclude_unset=True)
-        application = Application(**app_data)
+        application = Application(**app_data, user_id=user_id)
 
         # Initial transition event on creation
         initial_event = StatusEvent(from_status=None, to_status="APPLIED")
@@ -31,12 +33,16 @@ class ApplicationService:
         *,
         application_id: uuid.UUID,
         status_in: StatusEventCreate,
+        user_id: uuid.UUID | None = None,
     ) -> Application:
         stmt = (
             select(Application)
             .where(Application.id == application_id)
             .options(selectinload(Application.events))
         )
+        if user_id is not None:
+            stmt = stmt.where(Application.user_id == user_id)
+
         application = await db.scalar(stmt)
         if not application:
             raise ValueError(f"Application {application_id} not found")
@@ -64,13 +70,15 @@ class ApplicationService:
 
     @staticmethod
     async def get(
-        db: AsyncSession, *, application_id: uuid.UUID
+        db: AsyncSession, *, application_id: uuid.UUID, user_id: uuid.UUID | None = None
     ) -> Application | None:
         stmt = (
             select(Application)
             .where(Application.id == application_id)
             .options(selectinload(Application.events))
         )
+        if user_id is not None:
+            stmt = stmt.where(Application.user_id == user_id)
         return await db.scalar(stmt)
 
     @staticmethod
@@ -81,6 +89,7 @@ class ApplicationService:
         limit: int = 100,
         status: str | None = None,
         source: str | None = None,
+        user_id: uuid.UUID | None = None,
     ) -> list[Application]:
         stmt = (
             select(Application)
@@ -88,6 +97,8 @@ class ApplicationService:
             .order_by(Application.created_at.desc())
         )
 
+        if user_id is not None:
+            stmt = stmt.where(Application.user_id == user_id)
         if status:
             stmt = stmt.where(Application.current_status == status)
         if source:
@@ -98,8 +109,12 @@ class ApplicationService:
         return list(result.all())
 
     @staticmethod
-    async def delete(db: AsyncSession, *, application_id: uuid.UUID) -> bool:
+    async def delete(
+        db: AsyncSession, *, application_id: uuid.UUID, user_id: uuid.UUID | None = None
+    ) -> bool:
         stmt = select(Application).where(Application.id == application_id)
+        if user_id is not None:
+            stmt = stmt.where(Application.user_id == user_id)
         application = await db.scalar(stmt)
         if not application:
             return False
@@ -109,7 +124,7 @@ class ApplicationService:
 
     @staticmethod
     async def detect_and_mark_ghosted(
-        db: AsyncSession, days_threshold: int = 14
+        db: AsyncSession, days_threshold: int = 14, user_id: uuid.UUID | None = None
     ) -> list[Application]:
         today = datetime.now(timezone.utc).date()
         cutoff_date = today - timedelta(days=days_threshold)
@@ -122,6 +137,8 @@ class ApplicationService:
             )
             .options(selectinload(Application.events))
         )
+        if user_id is not None:
+            stmt = stmt.where(Application.user_id == user_id)
         result = await db.scalars(stmt)
         apps_to_ghost = list(result.all())
 
